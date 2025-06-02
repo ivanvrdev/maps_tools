@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maps Tools</title>
+   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <!-- <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script> -->
+</head>
+<body>
+  <div class="flex">
+    <div class="min-h-screen w-[70%] relative">
+      <div id="instruccion" class="absolute z-20 top-5 left-[50%] bg-white p-1 rounded hidden">Instrucción</div>
+      <div id="map" class="h-full z-10"></div>
+    </div>
+    <div class="flex flex-col items-center gap-2 pt-10 bg-gray-800 text-white w-[30%]">
+      <div class="text-center">
+        <h1 class="text-2xl">Maps Tools</h1>
+        <h2 class="text-lg text-gray-500">&copy;ivanvrdev 2025</h2>
+      </div>
+      <form action="#" id="form_agregar_objeto" class="flex flex-col gap-2 bg-gray-600 p-2 rounded-sm w-[75%]">
+        <h3 class="text-lg">Agregar Objetos</h3>
+        <div class="flex items-center justify-between">
+          <label for="objeto">Objeto</label>
+          <select name="objeto" id="objeto" class="text-white bg-gray-500 rounded w-[50%]">
+            <!-- <option value="puntero">puntero</option> -->
+            <option value="cartelito">cartelito</option>
+            <option value="linea">línea</option>
+          </select>
+        </div>
+        <div id="input_color" class="flex items-center justify-between hidden">
+          <label for="color">Color</label>
+          <input type="color" name="color" id="color">
+        </div>
+        <div  id="input_texto" class="flex flex-col gap-2">
+          <label for="texto">Texto</label>
+          <input type="text" name="texto" id="texto" class="bg-gray-500 rounded">
+        </div>
+        <button id="boton_agregar" type="submit" class="bg-gray-500 p-1 rounded cursor-pointer">
+          Agregar
+        </button>
+        <button id="boton_terminar" type="button" class="bg-gray-500 p-1 rounded cursor-pointer hidden">
+          Terminar
+        </button>
+      </form>
+      <!-- <button id="capturar" class="underline cursor-pointer">Sacar captura</button> -->
+      <!-- <h3 class="text-lg">Objetos agregados</h3> -->
+    </div>
+  </div>
+  <script>
+    const map = L.map('map').setView([-26.18489, -58.17313], 13);
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    
+    document.getElementById("objeto").addEventListener("change", (ev) => {
+      const inputTexto = document.getElementById("input_texto")
+      const inputColor = document.getElementById("input_color")
+      inputTexto.classList.add("hidden")
+      inputColor.classList.add("hidden")
+
+      if(ev.target.value === "cartelito"){
+        inputTexto.classList.remove("hidden")
+      }
+      if(ev.target.value === "linea"){
+        inputColor.classList.remove("hidden")
+      }
+    })
+
+    document.getElementById("form_agregar_objeto").addEventListener("submit", (ev)=>{
+      ev.preventDefault()
+
+      const objeto = ev.target["objeto"].value
+      const texto = ev.target["texto"].value
+      const color = ev.target["color"].value
+
+      const instruccion = document.getElementById("instruccion")
+      
+      if(objeto === "cartelito"){
+        instruccion.classList.remove("hidden")
+        
+        if(texto == ""){
+          instruccion.innerHTML = "Agrega un texto para el cartelito!"
+          return
+        }
+        instruccion.innerHTML = "Haga clic donde quiera agregar el cartelito. Puede arrastrar el mapa y hacer zoom."
+
+        map.on("click", (ev) => {
+          const popup = L.popup(ev.latlng, {content: texto, autoClose: false, closeOnClick: false})
+          .openOn(map)
+          instruccion.classList.add("hidden")
+          document.getElementById("texto").value = ""
+          map.off("click")
+        })
+      }
+
+      if(objeto === "linea"){
+        instruccion.innerHTML = "Hace clic en los puntos donde va a pasar la línea. Cuando termines, hace clic en terminar."
+        const botonAgregar = document.getElementById("boton_agregar")
+        const botonTerminar = document.getElementById("boton_terminar")
+        botonAgregar.classList.add("hidden")
+        botonTerminar.classList.remove("hidden")
+
+        const line = L.polyline([], {color: color}).addTo(map)
+      
+        map.on("click", (ev)=>{
+          line.addLatLng(ev.latlng)
+        })
+
+        const terminarListener = botonTerminar.addEventListener("click", (ev)=>{
+          botonTerminar.classList.add("hidden")
+          botonAgregar.classList.remove("hidden")
+
+          botonTerminar.removeEventListener("click", terminarListener)
+          map.off("click")
+        })
+      }
+    })
+
+    // document.getElementById("capturar").addEventListener("click", ev=>{
+    //   html2canvas(document.getElementById("map"), {
+    //       scale: 2 // Ajustar la escala para mayor calidad
+    //   }).then(canvas => {
+    //       // Crear una URL de datos
+    //       const dataURL = canvas.toDataURL("image/png");  // Cambiar "image/png" a "image/jpeg" si prefieres JPG
+
+    //       // Descargar la imagen
+    //       const link = document.createElement("a");
+    //       link.download = "captura_mapstools_ivanvrdev.png";  // Nombre del archivo
+    //       link.href = dataURL;
+    //       link.click();
+    //   });
+    // })
+
+  </script>
+</body>
+</html>
